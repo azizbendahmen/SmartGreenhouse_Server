@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Smart GreenHouse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .data-value { font-variant-numeric: tabular-nums; }
+        .scan-line { width: 100%; height: 2px; background: rgba(59, 130, 246, 0.8); position: absolute; box-shadow: 0 0 10px #3b82f6; animation: scan 2s infinite linear; display: none; }
+        @keyframes scan { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-microchip text-slate-700 text-xl"></i>
+                    <span class="font-bold text-lg tracking-tight text-slate-900">GreenHouse<span class="text-slate-400 font-normal">OS</span></span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="text-xs text-slate-500 font-medium">MAJ: <span id="timestamp" class="text-slate-900 data-value">--:--:--</span></div>
+                    <span class="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        
+        <!-- Capteurs -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="card p-4 flex flex-col justify-between">
+                <div class="flex justify-between items-start mb-2"><span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Température</span><i class="fa-solid fa-temperature-half text-slate-400"></i></div>
+                <div class="flex items-baseline gap-1"><span id="val-temp" class="text-2xl font-bold text-slate-900 data-value">--</span><span class="text-sm font-medium text-slate-500">°C</span></div>
+            </div>
+            <div class="card p-4 flex flex-col justify-between">
+                <div class="flex justify-between items-start mb-2"><span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Humidité Air</span><i class="fa-solid fa-droplet text-slate-400"></i></div>
+                <div class="flex items-baseline gap-1"><span id="val-hum" class="text-2xl font-bold text-slate-900 data-value">--</span><span class="text-sm font-medium text-slate-500">%</span></div>
+            </div>
+            <div id="card-soil" class="card p-4 flex flex-col justify-between transition-colors border-l-4 border-l-transparent">
+                <div class="flex justify-between items-start mb-2"><span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Humidité Sol</span><i class="fa-solid fa-seedling text-slate-400"></i></div>
+                <div class="flex items-baseline gap-1"><span id="val-sol" class="text-2xl font-bold text-slate-900 data-value">--</span><span class="text-sm font-medium text-slate-500">%</span></div>
+            </div>
+            <div class="card p-4 flex flex-col justify-between">
+                <div class="flex justify-between items-start mb-2"><span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Gaz (COV)</span><i class="fa-solid fa-wind text-slate-400"></i></div>
+                <div class="flex items-baseline gap-1"><span id="val-gaz" class="text-2xl font-bold text-slate-900 data-value">--</span><span class="text-sm font-medium text-slate-500">kΩ</span></div>
+            </div>
+        </div>
+
+        <!-- Graphique & Moteurs -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="card p-5 lg:col-span-2 flex flex-col">
+                <h3 class="text-sm font-semibold text-slate-800 mb-4">Télémétrie Temporelle</h3>
+                <div class="flex-1 w-full min-h-[200px]"><canvas id="myChart"></canvas></div>
+            </div>
+            <div class="space-y-4 flex flex-col">
+                <div id="weather-banner" class="card p-4 bg-slate-50 flex items-start gap-3">
+                    <i class="fa-solid fa-cloud-sun-rain mt-0.5 text-slate-500" id="weather-icon"></i>
+                    <div><h4 class="text-xs font-bold text-slate-700 uppercase">API Météo Predictive</h4><p id="weather-text" class="text-sm text-slate-600 mt-1">Vérification...</p></div>
+                </div>
+                <div class="card p-4 flex items-center justify-between">
+                    <div><p class="text-xs font-semibold text-slate-500 uppercase">Ventilateur</p><p class="text-sm font-medium text-slate-800 mt-0.5">Refroidissement</p></div>
+                    <span id="badge-fan" class="px-2.5 py-1 text-xs font-bold rounded-md bg-slate-100 text-slate-500">OFF</span>
+                </div>
+                <div class="card p-4 flex items-center justify-between">
+                    <div><p class="text-xs font-semibold text-slate-500 uppercase">Pompe Hydraulique</p><p class="text-sm font-medium text-slate-800 mt-0.5">Irrigation du substrat</p></div>
+                    <span id="badge-pump" class="px-2.5 py-1 text-xs font-bold rounded-md bg-slate-100 text-slate-500">OFF</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Intelligence Artificielle -->
+        <div>
+            <h2 class="text-lg font-bold text-slate-800 mb-4">Modules d'Intelligence Artificielle</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- LLM -->
+                <div class="card p-5 flex flex-col">
+                    <div class="flex justify-between items-start mb-4">
+                        <div><h3 class="text-sm font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-bolt text-blue-500"></i> Audit Automatisé</h3><p class="text-xs text-slate-500">LLM Engine (Gemini 2.5)</p></div>
+                        <button onclick="askAgronomist()" class="text-xs font-medium bg-slate-900 text-white px-3 py-1.5 rounded hover:bg-slate-800 transition-colors">Générer Audit</button>
+                    </div>
+                    <div class="flex-1 bg-slate-50 rounded border border-slate-100 p-4 flex items-center"><p id="agro-response" class="text-sm text-slate-700 leading-relaxed font-medium">En attente de requête de l'opérateur...</p></div>
+                </div>
+
+                <!-- Computer Vision PyTorch/YOLO -->
+                <div class="card p-5 flex flex-col">
+                    <div class="flex justify-between items-start mb-4">
+                        <div><h3 class="text-sm font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-eye text-indigo-500"></i> Vision Edge AI</h3><p class="text-xs text-slate-500">MobileNet V3 + YOLOv8</p></div>
+                        <button id="btn-cam" onclick="toggleCamera()" class="text-xs font-medium bg-slate-200 text-slate-800 px-3 py-1.5 rounded hover:bg-slate-300 transition-colors">Activer Flux</button>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="w-32 h-32 bg-slate-900 rounded overflow-hidden relative flex-shrink-0 border border-slate-800">
+                            <video id="webcam" autoplay playsinline class="w-full h-full object-cover hidden"></video>
+                            <div id="cam-placeholder" class="absolute inset-0 flex flex-col justify-center items-center text-slate-600"><i class="fa-solid fa-video-slash text-xl mb-1"></i><span class="text-[10px] uppercase font-bold tracking-wider">Feed Offline</span></div>
+                            <div id="scan-line" class="scan-line"></div>
+                        </div>
+                        <canvas id="capture-canvas" class="hidden"></canvas>
+                        <div class="flex-1 flex flex-col justify-between">
+                            <div class="bg-slate-50 border border-slate-100 rounded p-3 text-sm min-h-[5rem]">
+                                <p id="vision-status" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Résultat d'analyse</p>
+                                <div id="vision-result" class="font-medium text-slate-700">Aucune donnée vidéo.</div>
+                            </div>
+                            <button id="btn-scan" onclick="scanPlant()" disabled class="w-full mt-2 text-xs font-medium bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Exécuter Inférence</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#64748b';
+        const ctx = document.getElementById('myChart').getContext('2d');
+        const myChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Température (°C)', borderColor: '#ef4444', backgroundColor: 'transparent', data: [], tension: 0.4, borderWidth: 2, pointRadius: 0 }, { label: 'Humidité Sol (%)', borderColor: '#3b82f6', backgroundColor: 'transparent', data: [], tension: 0.4, borderWidth: 2, pointRadius: 0 }] }, 
+            options: { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'index' }, plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 6 } } }, scales: { x: { grid: { display: false }, border: {display: false} }, y: { border: { display: false }, grid: { color: '#f1f5f9' }, beginAtZero: true } } }
+        });
+
+        function fetchData() {
+            fetch('/api/data').then(res => res.json()).then(data => {
+                const l = data.latest;
+                document.getElementById('timestamp').innerText = l.timestamp;
+                document.getElementById('val-temp').innerText = l.temperature.toFixed(1);
+                document.getElementById('val-hum').innerText = l.humidite.toFixed(1);
+                document.getElementById('val-sol').innerText = l.sol;
+                document.getElementById('val-gaz').innerText = l.gaz.toFixed(1);
+
+                const cardSoil = document.getElementById('card-soil');
+                if(l.sol < 30) { cardSoil.classList.replace('border-l-transparent', 'border-l-red-500'); document.getElementById('val-sol').classList.replace('text-slate-900', 'text-red-600'); } 
+                else { cardSoil.classList.replace('border-l-red-500', 'border-l-transparent'); document.getElementById('val-sol').classList.replace('text-red-600', 'text-slate-900'); }
+
+                const wBanner = document.getElementById('weather-banner');
+                if (l.prevision_pluie) { wBanner.className = "card p-4 bg-orange-50 border-orange-200 flex items-start gap-3"; document.getElementById('weather-icon').className = "fa-solid fa-cloud-showers-water mt-0.5 text-orange-500"; document.getElementById('weather-text').innerHTML = "<span class='text-orange-700 font-medium'>Précipitations prévues. Irrigation suspendue.</span>"; } 
+                else { wBanner.className = "card p-4 bg-slate-50 flex items-start gap-3"; document.getElementById('weather-icon').className = "fa-solid fa-sun mt-0.5 text-slate-400"; document.getElementById('weather-text').innerHTML = "Aucune précipitation. Régime normal."; }
+
+                const badgeFan = document.getElementById('badge-fan');
+                if (l.fan === 1) { badgeFan.innerText = "ACTIF"; badgeFan.className = "px-2.5 py-1 text-xs font-bold rounded-md bg-blue-100 text-blue-700 animate-pulse"; } 
+                else { badgeFan.innerText = "VEILLE"; badgeFan.className = "px-2.5 py-1 text-xs font-bold rounded-md bg-slate-100 text-slate-500"; }
+
+                const badgePump = document.getElementById('badge-pump');
+                if (l.pompe === 1) { badgePump.innerText = "ACTIF"; badgePump.className = "px-2.5 py-1 text-xs font-bold rounded-md bg-emerald-100 text-emerald-700 animate-pulse"; } 
+                else { badgePump.innerText = "VEILLE"; badgePump.className = "px-2.5 py-1 text-xs font-bold rounded-md bg-slate-100 text-slate-500"; }
+
+                myChart.data.labels = data.history.labels; myChart.data.datasets[0].data = data.history.temperature; myChart.data.datasets[1].data = data.history.sol; myChart.update();
+            });
+        }
+        setInterval(fetchData, 2000); fetchData();
+
+        function askAgronomist() {
+            document.getElementById('agro-response').innerHTML = '<span class="text-slate-500"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Exécution du prompt sur le modèle distant...</span>';
+            fetch('/api/agronome').then(res => res.json()).then(data => { document.getElementById('agro-response').innerHTML = `<span class="text-slate-800 font-medium">"${data.conseil}"</span>`; }).catch(() => { document.getElementById('agro-response').innerHTML = '<span class="text-red-500 font-medium">Erreur API LLM.</span>'; });
+        }
+
+        let videoStream = null;
+        async function toggleCamera() {
+            if (!videoStream) {
+                try {
+                    videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    document.getElementById('webcam').srcObject = videoStream; document.getElementById('webcam').classList.remove('hidden'); document.getElementById('cam-placeholder').classList.add('hidden');
+                    document.getElementById('btn-cam').innerText = 'Désactiver'; document.getElementById('btn-scan').disabled = false;
+                } catch (err) { alert("Accès caméra refusé."); }
+            } else {
+                videoStream.getTracks().forEach(t => t.stop()); videoStream = null;
+                document.getElementById('webcam').classList.add('hidden'); document.getElementById('cam-placeholder').classList.remove('hidden');
+                document.getElementById('btn-cam').innerText = 'Activer Flux'; document.getElementById('btn-scan').disabled = true;
+            }
+        }
+
+        function scanPlant() {
+            if (!videoStream) return;
+            document.getElementById('scan-line').style.display = 'block';
+            document.getElementById('vision-result').innerHTML = '<span class="text-indigo-600 text-xs"><i class="fa-solid fa-spinner fa-spin"></i> Inférence en cours...</span>';
+            
+            const cvs = document.getElementById('capture-canvas'); 
+            cvs.width = 300; cvs.height = 300 * (document.getElementById('webcam').videoHeight / document.getElementById('webcam').videoWidth);
+            cvs.getContext('2d').drawImage(document.getElementById('webcam'), 0, 0, cvs.width, cvs.height);
+            
+            cvs.toBlob(blob => {
+                const fd = new FormData(); fd.append('file', blob, 'frame.jpg');
+                fetch('/api/analyze_plant', { method: 'POST', body: fd }).then(res => res.json()).then(data => {
+                    document.getElementById('scan-line').style.display = 'none';
+                    if(data.error) { document.getElementById('vision-result').innerHTML = `<span class="text-red-600 text-xs font-bold">${data.error}</span>`; } 
+                    else {
+                        let html = `<p class="${data.sain ? 'text-emerald-600' : 'text-orange-600'} text-sm font-bold">${data.disease} (${data.confidence}%)</p>`;
+                        if(data.alerte) html += `<div class="mt-1 px-2 py-1 bg-red-50 border border-red-200 text-red-700 text-xs rounded font-medium"><i class="fa-solid fa-triangle-exclamation"></i> ${data.alerte}</div>`;
+                        if(data.action !== "Aucune") html += `<p class="mt-1 text-[10px] text-slate-500 uppercase font-bold">Req: ${data.action}</p>`;
+                        document.getElementById('vision-result').innerHTML = html;
+                    }
+                }).catch(() => { document.getElementById('scan-line').style.display = 'none'; document.getElementById('vision-result').innerHTML = `<span class="text-red-600 text-xs font-bold">Erreur de connexion PyTorch.</span>`; });
+            }, 'image/jpeg', 0.8);
+        }
+    </script>
+</body>
+</html>
