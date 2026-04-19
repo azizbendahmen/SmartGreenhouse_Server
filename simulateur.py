@@ -5,7 +5,7 @@ import random
 URL = "http://127.0.0.1:3000/data"
 
 print("==========================================")
-print(" 🚀 SIMULATEUR IOT (EDGE DEVICE) ACTIF ")
+print("  SIMULATEUR IOT (EDGE DEVICE) ACTIF ")
 print("==========================================")
 
 temp, hum, pression, gaz, sol, pluie = 26.0, 55.0, 1013, 50.0, 85, 0
@@ -31,16 +31,25 @@ while True:
     else:
         pompe = 0
 
-    payload = {"temperature": round(temp, 1), "humidite": round(hum, 1), "pression": pression, "gaz": round(gaz, 1), "sol": sol, "pluie": pluie, "fan": fan, "pompe": pompe}
+    payload = {
+        "temperature": round(temp, 1), 
+        "humidite": round(hum, 1), 
+        "pression": pression, 
+        "gaz": round(gaz, 1), 
+        "sol": sol, 
+        "pluie": pluie, 
+        "fan": fan, 
+        "pompe": pompe
+    }
 
     try:
         res = requests.post(URL, json=payload)
         if res.status_code == 200:
             ia_blocage = res.json().get("block_pump", False)
-            print(f"📡 ENVOI -> Temp: {payload['temperature']}°C | Sol: {payload['sol']}% | Fan: {fan} | Pump: {pompe}")
+            print(f"ENVOI -> Temp: {payload['temperature']}C | Sol: {payload['sol']}% | Fan: {fan} | Pump: {pompe}")
         else:
-            print(f"❌ HTTP Error : {res.status_code}")
+            print(f"Erreur HTTP : {res.status_code}")
     except requests.exceptions.ConnectionError:
-        print("⚠️ Serveur Backend (app.py) injoignable.")
+        print("ATTENTION : Serveur Backend (app.py) injoignable. Lancez app.py d'abord.")
 
     time.sleep(2.5)
