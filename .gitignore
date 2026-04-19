@@ -1,0 +1,11 @@
+# On demande à Git d'ignorer le gros dossier d'images
+PlantVillage/
+
+# On ignore les fichiers systèmes Python cachés
+__pycache__/
+*.pyc
+
+# On ignore les environnements virtuels si tu en as un
+venv/
+env/
+.venv/
